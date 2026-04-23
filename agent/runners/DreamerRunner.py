@@ -3,7 +3,7 @@ import wandb
 from copy import deepcopy
 
 from agent.workers.DreamerWorker import DreamerWorker
-import ipdb
+# import ipdb
 
 import numpy as np
 import pickle
@@ -12,11 +12,10 @@ from environments import Env
 
 class DreamerServer:
     def __init__(self, n_workers, env_config, controller_config, model):
-        ray.init()
-
-        self.workers = [DreamerWorker.remote(i, env_config, controller_config) for i in range(n_workers)]
-        self.tasks = [worker.run.remote(model) for worker in self.workers]
         self.env_type = controller_config.ENV_TYPE
+        self.use_ray = False
+        self.local_worker = None
+        self.local_model = model
         
         eval_controller_config = deepcopy(controller_config)
         eval_controller_config.temperature = 1.0  # 1.0
@@ -24,26 +23,69 @@ class DreamerServer:
             eval_controller_config.determinisitc = True
 
         self.eval_episodes_num = 10
-        self.eval_workers = [DreamerWorker.remote(i, env_config, eval_controller_config) for i in range(self.eval_episodes_num)]
         self.eval_tasks = []
+        self.eval_workers = []
+
+        try:
+            ray.init()
+            self.use_ray = True
+        except OSError as exc:
+            if n_workers != 1:
+                raise RuntimeError(
+                    "Ray failed to initialize and local fallback only supports n_workers=1."
+                ) from exc
+
+            local_worker_cls = DreamerWorker.__ray_metadata__.modified_class
+            self.local_worker = local_worker_cls(0, env_config, controller_config)
+            self.eval_workers = [
+                local_worker_cls(i, env_config, eval_controller_config)
+                for i in range(self.eval_episodes_num)
+            ]
+            print(f"Ray init failed ({exc}); fallback to local single-process workers.")
+            return
+
+        self.workers = [DreamerWorker.remote(i, env_config, controller_config) for i in range(n_workers)]
+        self.tasks = [worker.run.remote(model) for worker in self.workers]
+        self.eval_workers = [DreamerWorker.remote(i, env_config, eval_controller_config) for i in range(self.eval_episodes_num)]
 
     def append(self, idx, update):
-        self.tasks.append(self.workers[idx].run.remote(update))
+        if self.use_ray:
+            self.tasks.append(self.workers[idx].run.remote(update))
+        else:
+            self.local_model = update
 
     def run(self):
-        done_id, tasks = ray.wait(self.tasks)
-        self.tasks = tasks
-        recvs = ray.get(done_id)[0]
-        return recvs
+        if self.use_ray:
+            done_id, tasks = ray.wait(self.tasks)
+            self.tasks = tasks
+            recvs = ray.get(done_id)[0]
+            return recvs
+
+        assert self.local_worker is not None
+        return self.local_worker.run(self.local_model)
     
     ## eval
     def eval_append(self, idx, update):
-        self.eval_tasks.append(self.eval_workers[idx].run.remote(update))
+        if self.use_ray:
+            self.eval_tasks.append(self.eval_workers[idx].run.remote(update))
         
     def evaluate(self, model_params):
         eval_win_rate = 0.
         eval_returns = 0.
         eval_steps = 0.
+
+        if not self.use_ray:
+            for worker in self.eval_workers:
+                eval_rollout, eval_info = worker.run(model_params)
+                eval_win_rate += eval_info["reward"] if eval_info["reward"] is not None else 0.
+                eval_returns += eval_rollout["reward"].sum(0).mean()
+                eval_steps += eval_info["steps_done"]
+
+            return (
+                eval_win_rate / self.eval_episodes_num,
+                eval_returns / self.eval_episodes_num,
+                eval_steps / self.eval_episodes_num,
+            )
         
         for i in range(self.eval_episodes_num):
             self.eval_append(i, model_params)

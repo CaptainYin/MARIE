@@ -24,7 +24,7 @@ class SMAXDreamerLearnerConfig(SMAXDreamerConfig):
         self.EPOCHS = 5 # 4; 27m epochs should be 20, agents_num ~ 10 should be 20
 
         self.TARGET_UPDATE = 20  # 1
-        self.DEVICE = 'cuda'
+        self.DEVICE = self.default_device()
         self.GRAD_CLIP = 100.0
         # self.HORIZON = 15
         self.ENTROPY = 0.001  # with larger 0.01, we can obtain a little bit better performance on 2m_vs_1z

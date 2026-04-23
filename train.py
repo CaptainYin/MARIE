@@ -1,12 +1,20 @@
+import datetime
 import argparse
 import os
 import shutil
-import datetime
 from pathlib import Path
+
+
+def configure_wandb_environment() -> None:
+    """Avoid wandb socket-service port collisions unless the user overrides it."""
+    os.environ.setdefault("WANDB_DISABLE_SERVICE", "true")
+
+
+configure_wandb_environment()
 
 from agent.runners.DreamerRunner import DreamerRunner
 from configs import Experiment
-from configs.EnvConfigs import EnvCurriculumConfig, StarCraftConfig, PettingZooConfig, FootballConfig, MAMujocoConfig, SMAXConfig
+from configs.EnvConfigs import EnvCurriculumConfig, PettingZooConfig, FootballConfig, MAMujocoConfig #SMAXConfig,StarCraftConfig
 
 
 from configs.dreamer.DreamerControllerConfig import DreamerControllerConfig

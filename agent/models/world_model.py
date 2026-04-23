@@ -28,7 +28,7 @@ from .reward_utils import losses_dict
 from .world_model_env import MAWorldModelEnv
 from utils import init_weights, action_split_into_bins, discretize_into_bins, initialize_weights, symlog, symexp, obs_split_into_bins
 import wandb
-import ipdb
+# import ipdb
 
 @dataclass
 class MAWorldModelOutput:

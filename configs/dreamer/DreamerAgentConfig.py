@@ -111,6 +111,10 @@ class DreamerConfig(Config):
         self.use_stack = True
         self.stack_obs_num = 5
 
+    @staticmethod
+    def default_device() -> str:
+        return "cuda" if torch.cuda.is_available() else "cpu"
+
 
 @dataclass
 class RSSMStateBase:

@@ -8,7 +8,7 @@ import torch.nn as nn
 
 from einops import rearrange
 
-import ipdb
+# import ipdb
 
 class SimpleVQAutoEncoder(nn.Module):
     def __init__(self, in_dim: int, embed_dim: int, num_tokens: int, hidden_size: int = 512, **vq_kwargs):

@@ -1,10 +1,10 @@
 from configs.Config import Config
 from env.flatland.EnvCurriculum import EnvCurriculum, EnvCurriculumSample, EnvCurriculumPrioritizedSample
-from env.starcraft.StarCraft import StarCraft
+# from env.starcraft.StarCraft import StarCraft
 from env.pettingzoo.mpe_env import PettingZooMPEEnv
 from env.football.Football import Football
 from env.mamujoco.multiagent_mujoco.mujoco_multi import MujocoMulti
-from env.smax.SMAX import SMAX
+# from env.smax.SMAX import SMAX
 
 class EnvConfig(Config):
     def __init__(self):
@@ -14,23 +14,23 @@ class EnvConfig(Config):
         pass
 
 
-class StarCraftConfig(EnvConfig):
+# class StarCraftConfig(EnvConfig):
 
-    def __init__(self, env_name, seed):
-        self.env_name = env_name
-        self.seed = seed
+#     def __init__(self, env_name, seed):
+#         self.env_name = env_name
+#         self.seed = seed
 
-    def create_env(self):
-        return StarCraft(self.env_name, self.seed)
+#     def create_env(self):
+#         return StarCraft(self.env_name, self.seed)
 
-class SMAXConfig(EnvConfig):
-    def __init__(self, env_name, seed, **kwargs):
-        self.env_name = env_name
-        self.seed = seed
-        self.kwargs = kwargs
+# class SMAXConfig(EnvConfig):
+#     def __init__(self, env_name, seed, **kwargs):
+#         self.env_name = env_name
+#         self.seed = seed
+#         self.kwargs = kwargs
 
-    def create_env(self):
-        return SMAX(self.env_name, self.seed, **self.kwargs)
+#     def create_env(self):
+#         return SMAX(self.env_name, self.seed, **self.kwargs)
 
 class PettingZooConfig(EnvConfig):
     def __init__(self, env_name, seed, continuous_action):

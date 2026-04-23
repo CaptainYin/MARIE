@@ -400,7 +400,7 @@ def reduce_states(rssm_states: list, dim, func):
 
 @torch.no_grad()
 def _compute_mamba_errors(model_dict, sample, horizons):
-    import ipdb
+    # import ipdb
     from networks.dreamer.rnns import rollout_representation
     from agent.optim.loss import calculate_next_reward
     

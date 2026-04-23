@@ -14,7 +14,7 @@ from configs.EnvConfigs import StarCraftConfig, EnvCurriculumConfig
 from configs.dreamer.DreamerControllerConfig import DreamerControllerConfig
 from configs.dreamer.DreamerLearnerConfig import DreamerLearnerConfig
 
-import ipdb
+# import ipdb
 
 def parse_args():
     parser = argparse.ArgumentParser()

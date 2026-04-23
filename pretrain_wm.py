@@ -5,6 +5,14 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 
+
+def configure_wandb_environment() -> None:
+    """Avoid wandb socket-service port collisions unless the user overrides it."""
+    os.environ.setdefault("WANDB_DISABLE_SERVICE", "true")
+
+
+configure_wandb_environment()
+
 from configs.dreamer.DreamerLearnerConfig import DreamerLearnerConfig
 from configs.EnvConfigs import StarCraftConfig
 from environments import Env

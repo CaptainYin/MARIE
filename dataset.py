@@ -12,7 +12,7 @@ import numpy as np
 
 from episode import Episode, SC2Episode
 
-import ipdb
+# import ipdb
 
 Batch = Dict[str, torch.Tensor]
 

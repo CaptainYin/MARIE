@@ -45,7 +45,7 @@ class MPEDreamerLearnerConfig(MPEDreamerConfig):
 
         self.TARGET_UPDATE = 20  # 1
         self.clip_param = 0.2
-        self.DEVICE = 'cuda'
+        self.DEVICE = self.default_device()
         self.GRAD_CLIP = 100.0
         # self.HORIZON = 15
         self.ENTROPY = 0.001

@@ -124,8 +124,9 @@ It is worth noting that:
 on MAMujoco
 
 ```bash
-python train.py --n_workers 1 --env mamujoco --env_name ${map_name} --seed ${seed} --agent_conf ${agent_conf} --steps 1000000 \
-  --mode online --tokenizer vq --decay 0.8 --temperature 1.0 --sample_temp inf --ce_for_r
+python3 train.py --n_workers 1 --env mamujoco --env_name ${map_name} --seed ${seed} --agent_conf ${agent_conf} --steps 1000000 --mode online --tokenizer vq --decay 0.8 --temperature 1.0 --sample_temp inf --ce_for_r
+
+python3 train.py --n_workers 1 --env mamujoco --env_name HalfCheetah-v2 --seed 0 --agent_conf 3x2 --steps 10000 --mode offline --tokenizer vq --decay 0.8 --temperature 1.0 --sample_temp inf --ce_for_r
 ```
 
 on Gfootball, although we have not reported corresponding results in the paper yet, in our early experiments, we recommend the readers to use ```--tokenizer fsq``` to run MARIE, which can robustly discretize the observation in the gfootball env.
