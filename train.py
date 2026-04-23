@@ -240,26 +240,43 @@ if __name__ == "__main__":
     configs["learner_config"].map_name = args.env_name
 
     group_name = generate_group_name(args, configs["learner_config"])
-    postfix = "_reward-average" if args.average_r else ""
-    postfix += f'_sample_temp={args.sample_temp}' if not configs["learner_config"].CONTINUOUS_ACTION else ""
+    # postfix = "_reward-average" if args.average_r else ""
+    # postfix += f'_sample_temp={args.sample_temp}' if not configs["learner_config"].CONTINUOUS_ACTION else ""
     
     # postfix += "_use_id" if configs["learner_config"].observe_agent_id else ""
     # postfix += "_use_last_action" if configs["learner_config"].observe_last_action else ""
     # postfix += "_use_feat_norm" if configs["learner_config"].use_feature_norm else ""
 
-    if configs["learner_config"].use_ce_for_r:
-        run_name = f'(t_embed={configs["learner_config"].EMBED_DIM}) marie_{args.env_name}_{args.agent_conf}_seed_{RANDOM_SEED}_' + format_numel_str_deci(args.steps) + f'_interval={configs["learner_config"].N_SAMPLES}_{rewards_prediction_config["loss_type"]}_bins{rewards_prediction_config["bins"]}' + postfix
+    if args.env == Env.MAMUJOCO:
+        run_name = f"MARIE_s{args.seed}_{args.env_name}"
+        if args.agent_conf is not None:
+            run_name += f"_{args.agent_conf}"
     else:
-        run_name = f'(t_embed={configs["learner_config"].EMBED_DIM}) marie_{args.env_name}_{args.agent_conf}_seed_{RANDOM_SEED}_' + format_numel_str_deci(args.steps) + f'_interval={configs["learner_config"].N_SAMPLES}' + postfix
+        run_name = f"MARIE_s{args.seed}_{args.env_name}"
+            
+    # if configs["learner_config"].use_ce_for_r:
+    #     run_name = f'(t_embed={configs["learner_config"].EMBED_DIM}) marie_{args.env_name}_{args.agent_conf}_seed_{RANDOM_SEED}_' + format_numel_str_deci(args.steps) + f'_interval={configs["learner_config"].N_SAMPLES}_{rewards_prediction_config["loss_type"]}_bins{rewards_prediction_config["bins"]}' + postfix
+    # else:
+    #     run_name = f'(t_embed={configs["learner_config"].EMBED_DIM}) marie_{args.env_name}_{args.agent_conf}_seed_{RANDOM_SEED}_' + format_numel_str_deci(args.steps) + f'_interval={configs["learner_config"].N_SAMPLES}' + postfix
 
-    prefix = f"({current_date_string}_T={args.temperature}_eval-T=1.0)" if not configs["learner_config"].CONTINUOUS_ACTION else f"({current_date_string})"
+    # prefix = f"({current_date_string}_T={args.temperature}_eval-T=1.0)" if not configs["learner_config"].CONTINUOUS_ACTION else f"({current_date_string})"
 
-    global wandb
+    job_type = "MARIE"
+
     import wandb
+
+    if args.env == Env.MAMUJOCO:
+        project_name = "mamujoco"
+    elif args.env == Env.BIDEXHANDS:
+        project_name = "dexhands"
+    else:
+        project_name = "SMAD"
+        
     wandb.init(
-        project=args.env,
+        project=project_name,
         mode=args.mode,
-        group=prefix + group_name,
+        group=group_name,
+        job_type=job_type,
         name=run_name,
         config=configs["learner_config"].to_dict(),
         notes="",

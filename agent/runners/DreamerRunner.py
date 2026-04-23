@@ -116,7 +116,6 @@ class DreamerRunner:
         
     def run(self, max_steps=10 ** 10, max_episodes=10 ** 10, save_interval= 10000, save_mode="interval"):
         cur_steps, cur_episode = 0, 0
-        save_interval_steps = 0
         last_save_steps = 0
         last_eval_steps = 0
         
@@ -139,7 +138,6 @@ class DreamerRunner:
 
             cur_steps += info["steps_done"]
             cur_episode += 1
-            save_interval_steps += info["steps_done"]
             returns = rollout["reward"].sum(0).mean()
 
             if self.env_type == Env.STARCRAFT:
@@ -161,19 +159,19 @@ class DreamerRunner:
             self.learner.step(rollout)
 
             ## save model
-            if (save_interval_steps - last_save_steps) > save_interval and save_mode == "interval":
-                self.learner.save(self.learner.config.RUN_DIR + f"/ckpt/model_{save_interval_steps // 1000}Ksteps.pth")
-                last_save_steps = save_interval_steps // save_interval * save_interval
+            if (cur_steps - last_save_steps) > save_interval and save_mode == "interval":
+                self.learner.save(self.learner.config.RUN_DIR + f"/ckpt/model_{cur_steps // 1000}Ksteps.pth")
+                last_save_steps = cur_steps // save_interval * save_interval
 
             ## evaluation
-            if (save_interval_steps - last_eval_steps) > 500:
+            if (cur_steps - last_eval_steps) > 1000:
                 eval_win_rate, eval_returns, aver_eval_steps = self.server.evaluate(self.learner.params())
-                last_eval_steps = save_interval_steps // 500 * 500
+                last_eval_steps = cur_steps // 1000 * 1000
                 
-                wandb.log({'eval_win_rate': eval_win_rate, "steps": save_interval_steps})
-                wandb.log({'eval_returns': eval_returns, "steps": save_interval_steps})
+                wandb.log({'eval_win_rate': eval_win_rate, "steps": cur_steps})
+                wandb.log({'eval_returns': eval_returns, "steps": cur_steps})
 
-                steps.append(save_interval_steps)
+                steps.append(cur_steps)
                 eval_win_rates.append(eval_win_rate)
                 eval_ret_list.append(eval_returns)
 
@@ -187,13 +185,13 @@ class DreamerRunner:
                     pickle.dump(stored_dict, f)
 
                 if self.env_type == Env.STARCRAFT or self.env_type == Env.SMAX:
-                    print(f"Steps: {save_interval_steps}, Eval_win_rate: {eval_win_rate}, Eval_returns: {eval_returns}, Mean episode length {aver_eval_steps}")
+                    print(f"Steps: {cur_steps}, Eval_win_rate: {eval_win_rate}, Eval_returns: {eval_returns}, Mean episode length {aver_eval_steps}")
 
                 elif self.env_type == Env.MAMUJOCO or self.env_type == Env.PETTINGZOO:
-                    print(f"Steps: {save_interval_steps}, Eval rew per step: {eval_win_rate}, Eval_returns: {eval_returns}, Mean episode length {aver_eval_steps}")
+                    print(f"Steps: {cur_steps}, Eval rew per step: {eval_win_rate}, Eval_returns: {eval_returns}, Mean episode length {aver_eval_steps}")
 
                 else:
-                    print(f"Steps: {save_interval_steps}, Eval average scores: {eval_win_rate}, Eval_returns: {eval_returns}, Mean episode length {aver_eval_steps}")
+                    print(f"Steps: {cur_steps}, Eval average scores: {eval_win_rate}, Eval_returns: {eval_returns}, Mean episode length {aver_eval_steps}")
 
             if cur_episode >= max_episodes or cur_steps >= max_steps:
                 self.learner.save(self.learner.config.RUN_DIR + f"/ckpt/model_final.pth")
@@ -208,7 +206,6 @@ class DreamerRunner:
         self.learner.load_pretrained_wm(world_model_path)
         
         cur_steps, cur_episode = 0, 0
-        save_interval_steps = 0
         last_save_steps = 0
 
         wandb.define_metric("steps")
@@ -223,7 +220,6 @@ class DreamerRunner:
 
             cur_steps += info["steps_done"]
             cur_episode += 1
-            save_interval_steps += info["steps_done"]
             returns = rollout["reward"].sum(0).mean()
 
             wandb.log({'win rate': info["reward"], 'steps': cur_steps})
@@ -234,9 +230,9 @@ class DreamerRunner:
             # train actor only
             self.learner.train_actor_only(rollout)
 
-            if (save_interval_steps - last_save_steps) > 10000:
-                self.learner.save(self.learner.config.RUN_DIR + f"/ckpt/model_{save_interval_steps // 10000}Ksteps.pth")
-                last_save_steps = save_interval_steps // 10000 * 10000
+            if (cur_steps - last_save_steps) > 10000:
+                self.learner.save(self.learner.config.RUN_DIR + f"/ckpt/model_{cur_steps // 10000}Ksteps.pth")
+                last_save_steps = cur_steps // 10000 * 10000
 
             if cur_episode >= max_episodes or cur_steps >= max_steps:
                 break
