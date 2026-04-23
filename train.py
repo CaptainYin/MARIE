@@ -171,6 +171,26 @@ def train_dreamer(exp, n_workers):
     runner.run(exp.steps, exp.episodes, save_interval=20000, save_mode="interval")
 
 
+def _shutdown_runtime(wandb_run) -> None:
+    # Tear down Ray before closing wandb so background worker output and thread
+    # cleanup do not race with wandb's async upload pool during interpreter exit.
+    try:
+        import ray
+
+        if ray.is_initialized():
+            ray.shutdown()
+    except Exception:
+        pass
+
+    if wandb_run is not None:
+        try:
+            import wandb
+
+            wandb.finish()
+        except Exception:
+            pass
+
+
 def get_env_info(configs, env):
     if not env.discrete:
         assert hasattr(env, "individual_action_space")
@@ -421,7 +441,7 @@ if __name__ == "__main__":
     else:
         project_name = "SMAD"
 
-    wandb.init(
+    wandb_run = wandb.init(
         project=project_name,
         mode=args.mode,
         group=group_name,
@@ -431,18 +451,21 @@ if __name__ == "__main__":
         notes="",
     )
 
-    exp = Experiment(
-        steps=args.steps,
-        episodes=50000,
-        random_seed=RANDOM_SEED,
-        env_config=EnvCurriculumConfig(
-            *zip(configs["env_config"]),
-            Env(args.env),
-            obs_builder_config=configs["obs_builder_config"],
-            reward_config=configs["reward_config"],
-        ),
-        controller_config=configs["controller_config"],
-        learner_config=configs["learner_config"],
-    )
+    try:
+        exp = Experiment(
+            steps=args.steps,
+            episodes=50000,
+            random_seed=RANDOM_SEED,
+            env_config=EnvCurriculumConfig(
+                *zip(configs["env_config"]),
+                Env(args.env),
+                obs_builder_config=configs["obs_builder_config"],
+                reward_config=configs["reward_config"],
+            ),
+            controller_config=configs["controller_config"],
+            learner_config=configs["learner_config"],
+        )
 
-    train_dreamer(exp, n_workers=args.n_workers)
+        train_dreamer(exp, n_workers=args.n_workers)
+    finally:
+        _shutdown_runtime(wandb_run)
