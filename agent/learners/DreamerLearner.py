@@ -189,11 +189,11 @@ class DreamerLearner:
         # self.model_optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config.MODEL_LR, weight_decay=1e-4)
 
         self.actor_optimizer  = torch.optim.Adam(self.actor.parameters(), lr=self.config.ACTOR_LR,
-                                                 weight_decay=0.0 if self.env_type in [Env.PETTINGZOO, Env.GRF, Env.MAMUJOCO] else 0.00001,
-                                                 eps=1e-5 if self.env_type in [Env.PETTINGZOO, Env.GRF, Env.MAMUJOCO] else 1e-8)
+                                                 weight_decay=0.0 if self.env_type in [Env.PETTINGZOO, Env.GRF, Env.MAMUJOCO, Env.BIDEXHANDS] else 0.00001,
+                                                 eps=1e-5 if self.env_type in [Env.PETTINGZOO, Env.GRF, Env.MAMUJOCO, Env.BIDEXHANDS] else 1e-8)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=self.config.VALUE_LR,
-                                                 weight_decay=0.0 if self.env_type in [Env.PETTINGZOO, Env.GRF, Env.MAMUJOCO] else 0.00001,
-                                                 eps=1e-5 if self.env_type in [Env.PETTINGZOO, Env.GRF, Env.MAMUJOCO] else 1e-8)
+                                                 weight_decay=0.0 if self.env_type in [Env.PETTINGZOO, Env.GRF, Env.MAMUJOCO, Env.BIDEXHANDS] else 0.00001,
+                                                 eps=1e-5 if self.env_type in [Env.PETTINGZOO, Env.GRF, Env.MAMUJOCO, Env.BIDEXHANDS] else 1e-8)
 
     def params(self):
         return {'tokenizer': {k: v.cpu() for k, v in self.tokenizer.state_dict().items()},
@@ -423,7 +423,7 @@ class DreamerLearner:
             adv = returns.detach() - self.critic(critic_feat).detach()
 
 
-        if self.env_type in [Env.STARCRAFT, Env.GRF, Env.MAMUJOCO, Env.SMAX]:
+        if self.env_type in [Env.STARCRAFT, Env.GRF, Env.MAMUJOCO, Env.SMAX, Env.BIDEXHANDS]:
             adv = advantage(adv)
         elif self.env_type == Env.PETTINGZOO:
             pass
@@ -438,7 +438,7 @@ class DreamerLearner:
             inds = np.random.permutation(actions.shape[0])
 
             step = 2000
-            if self.env_type in [Env.MAMUJOCO]:
+            if self.env_type in [Env.MAMUJOCO, Env.BIDEXHANDS]:
                 # if environment is MAMujoco, we set the step according to the num_mini_batch
                 step = int(len(inds) / self.config.num_mini_batch)
 
@@ -534,7 +534,7 @@ class DreamerLearner:
                 filled=torch.ones(data['done'].shape[0], dtype=torch.bool)
             )
 
-        elif self.env_type == Env.MAMUJOCO:
+        elif self.env_type in [Env.MAMUJOCO, Env.BIDEXHANDS]:
             episode = MamujocoEpisode(
                 observation=torch.FloatTensor(data['observation'].copy()),              # (Length, n_agents, obs_dim)
                 action=torch.FloatTensor(data['action'].copy()),                        # (Length, n_agents, act_dim)

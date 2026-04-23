@@ -2,7 +2,7 @@ import ray
 import wandb
 from copy import deepcopy
 
-from agent.workers.DreamerWorker import DreamerWorker
+from agent.workers.DreamerWorker import DreamerWorker, DreamerWorkerBase
 # import ipdb
 
 import numpy as np
@@ -104,12 +104,43 @@ class DreamerServer:
         return eval_win_rate / self.eval_episodes_num, eval_returns / self.eval_episodes_num, eval_steps / self.eval_episodes_num
 
 
+class LocalDreamerServer:
+    def __init__(self, env_config, controller_config, model):
+        self.env_type = controller_config.ENV_TYPE
+        self.worker = DreamerWorkerBase(0, env_config, controller_config)
+
+        eval_controller_config = deepcopy(controller_config)
+        eval_controller_config.temperature = 1.0
+        if hasattr(eval_controller_config, "determinisitc"):
+            eval_controller_config.determinisitc = True
+
+        self.eval_controller = eval_controller_config.create_controller()
+        self.pending_update = model
+
+    def append(self, idx, update):
+        del idx
+        self.pending_update = update
+
+    def run(self):
+        return self.worker.run(self.pending_update)
+
+    def evaluate(self, model_params):
+        eval_rollout, eval_info = self.worker.run(model_params, controller=self.eval_controller)
+        eval_win_rate = eval_info["reward"] if eval_info["reward"] is not None else 0.0
+        eval_returns = eval_rollout["reward"].sum(0).mean()
+        eval_steps = eval_info["steps_done"]
+        return eval_win_rate, eval_returns, eval_steps
+
+
 class DreamerRunner:
 
     def __init__(self, env_config, learner_config, controller_config, n_workers):
         self.n_workers = n_workers
         self.learner = learner_config.create_learner()
-        self.server = DreamerServer(n_workers, env_config, controller_config, self.learner.params())
+        if controller_config.ENV_TYPE == Env.BIDEXHANDS:
+            self.server = LocalDreamerServer(env_config, controller_config, self.learner.params())
+        else:
+            self.server = DreamerServer(n_workers, env_config, controller_config, self.learner.params())
 
         self.save_path = Path(learner_config.RUN_DIR).parent / f"marie_{learner_config.map_name}_seed{learner_config.seed}.pkl"
         self.env_type = controller_config.ENV_TYPE
@@ -146,7 +177,7 @@ class DreamerRunner:
             elif self.env_type == Env.SMAX:
                 wandb.log({'win': info["reward"], 'steps': cur_steps})
                 print("Epi: %4s" % cur_episode, "steps: %5s" % (cur_steps), f'Win: {info["reward"]}', 'Returns: %.4f' % returns, f"Entropy: {ent_str}", sep=' | ')
-            elif self.env_type == Env.MAMUJOCO or self.env_type == Env.PETTINGZOO:
+            elif self.env_type in [Env.MAMUJOCO, Env.PETTINGZOO, Env.BIDEXHANDS]:
                 wandb.log({'rew_per_step': info["reward"], 'steps': cur_steps})
                 print("Epi: %4s" % cur_episode, "steps: %5s" % (cur_steps), f'Rew per step: {info["reward"]}', 'Returns: %.4f' % returns, f"Average std: {ent_str}", sep=' | ')
             else:
@@ -187,7 +218,7 @@ class DreamerRunner:
                 if self.env_type == Env.STARCRAFT or self.env_type == Env.SMAX:
                     print(f"Steps: {cur_steps}, Eval_win_rate: {eval_win_rate}, Eval_returns: {eval_returns}, Mean episode length {aver_eval_steps}")
 
-                elif self.env_type == Env.MAMUJOCO or self.env_type == Env.PETTINGZOO:
+                elif self.env_type in [Env.MAMUJOCO, Env.PETTINGZOO, Env.BIDEXHANDS]:
                     print(f"Steps: {cur_steps}, Eval rew per step: {eval_win_rate}, Eval_returns: {eval_returns}, Mean episode length {aver_eval_steps}")
 
                 else:

@@ -4,6 +4,7 @@ debug_results
 test_results
 test_plot_results
 wandb
+remote_sync
 results
 pretrained_weights
 *_results

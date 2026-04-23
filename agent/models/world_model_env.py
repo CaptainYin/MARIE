@@ -225,7 +225,7 @@ class MAWorldModelEnv:
             elif self.env_type == "maniskill2":
                 return rec
             
-            elif self.env_type == Env.MAMUJOCO:
+            elif self.env_type in [Env.MAMUJOCO, Env.BIDEXHANDS]:
                 return rec
 
             else:
