@@ -1,4 +1,6 @@
 import argparse
+import matplotlib
+matplotlib.use("Agg")  # Use non-interactive backend for matplotlib
 import datetime
 import os
 import random
