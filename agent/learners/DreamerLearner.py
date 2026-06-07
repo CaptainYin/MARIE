@@ -30,6 +30,15 @@ from dataset import MultiAgentEpisodesDataset
 import wandb
 # import ipdb
 
+
+def _wandb_value(value):
+    if isinstance(value, torch.Tensor):
+        value = value.detach()
+        if value.numel() == 1:
+            return value.item()
+    return value
+
+
 def orthogonal_init(tensor, gain=1):
     if tensor.ndimension() < 2:
         raise ValueError("Only tensors with 2 or more dimensions are supported")
@@ -69,7 +78,8 @@ class DreamerLearner:
         self.env_type = config.ENV_TYPE
         # self.config.update()
 
-        torch.autograd.set_detect_anomaly(True)
+        torch.autograd.set_detect_anomaly(False)
+        self.current_env_steps = None
         
         # tokenizer
         if self.config.tokenizer_type == 'vq':
@@ -212,7 +222,15 @@ class DreamerLearner:
     def save(self, save_path):
         torch.save(self.params(), save_path)
 
-    def step(self, rollout):
+    def _wandb_log(self, data):
+        payload = {key: _wandb_value(value) for key, value in data.items()}
+        if self.current_env_steps is not None:
+            payload["steps"] = int(self.current_env_steps)
+        wandb.log(payload)
+
+    def step(self, rollout, env_steps=None):
+        self.current_env_steps = env_steps
+        setattr(self.config, "logging_step", env_steps)
         if self.n_agents != rollout['action'].shape[-2]:
             self.n_agents = rollout['action'].shape[-2]
 
@@ -309,7 +327,7 @@ class DreamerLearner:
                 samples = self._to_device(samples)
                 self.train_agent_with_transformer(samples)
 
-        wandb.log({'epoch': self.cur_wandb_epoch, **intermediate_losses})
+        self._wandb_log({'epoch': self.cur_wandb_epoch, **intermediate_losses})
         
         if self.train_count % 200 == 0 and self.train_count > 19 and False:
             self.model.eval()
@@ -430,7 +448,7 @@ class DreamerLearner:
         else:
             raise NotImplementedError('Error')
 
-        wandb.log({'Agent/Returns': returns.mean()})
+        self._wandb_log({'Agent/Returns': returns.mean()})
         
         self.cur_update += 1
         
@@ -447,10 +465,12 @@ class DreamerLearner:
 
                 if not self.config.CONTINUOUS_ACTION:
                     loss = actor_loss(actor_feat[idx], actions[idx], av_actions[idx] if av_actions is not None else None,
-                                      old_policy[idx], adv[idx], self.actor, self.entropy)
+                                      old_policy[idx], adv[idx], self.actor, self.entropy,
+                                      log_steps=self.current_env_steps)
                 else:
                     loss = continuous_actor_loss(actor_feat[idx], actions[idx], None,
-                                                 old_policy[idx], adv[idx], self.actor, self.entropy, self.config.clip_param)
+                                                 old_policy[idx], adv[idx], self.actor, self.entropy, self.config.clip_param,
+                                                 log_steps=self.current_env_steps)
                 
                 actor_grad_norm = self.apply_optimizer(self.actor_optimizer, self.actor, loss, self.config.GRAD_CLIP_POLICY)
                 self.entropy *= self.config.ENTROPY_ANNEALING
@@ -489,11 +509,15 @@ class DreamerLearner:
                     val_loss = value_loss(self.critic, critic_feat[idx], returns[idx])
 
                 if np.random.randint(20) == 9:
-                    wandb.log({'Agent/val_loss': val_loss, 'Agent/actor_loss': loss})
+                    self._wandb_log({'Agent/val_loss': val_loss, 'Agent/actor_loss': loss})
                 critic_grad_norm = self.apply_optimizer(self.critic_optimizer, self.critic, val_loss, self.config.GRAD_CLIP_POLICY)
                 
-                wandb.log({'Agent/actor_grad_norm': actor_grad_norm, 'Agent/critic_grad_norm': critic_grad_norm})
-        
+                self._wandb_log({'Agent/actor_grad_norm': actor_grad_norm, 'Agent/critic_grad_norm': critic_grad_norm})
+
+        del actions, av_actions, old_policy, actor_feat, critic_feat, returns, old_values, adv
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
         # hard update critic
         if self.cur_update % self.config.TARGET_UPDATE == 0:
             self.old_critic = deepcopy(self.critic)

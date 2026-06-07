@@ -367,7 +367,7 @@ if __name__ == "__main__":
         raise Exception("Unknown environment")
 
     _seed_everywhere(RANDOM_SEED, torch)
-    torch.autograd.set_detect_anomaly(True)
+    torch.autograd.set_detect_anomaly(False)
 
     configs["env_config"][0].ENV_TYPE = Env(args.env)
     configs["learner_config"].ENV_TYPE = Env(args.env)
@@ -438,6 +438,8 @@ if __name__ == "__main__":
 
     if args.env == Env.MAMUJOCO:
         project_name = "mamujoco"
+    elif args.env == Env.PETTINGZOO:
+        project_name = "MPE"
     elif args.env == Env.BIDEXHANDS:
         project_name = "dexhands"
     else:
