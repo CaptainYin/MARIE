@@ -156,7 +156,6 @@ class DreamerRunner:
 
         wandb.define_metric("steps")
         wandb.define_metric("win", step_metric="steps")
-        wandb.define_metric("incre_win_rate", step_metric="steps")
         wandb.define_metric("reward", step_metric="steps")
         wandb.define_metric("rew_per_step", step_metric="steps")
         wandb.define_metric("scores", step_metric="steps")
@@ -187,7 +186,7 @@ class DreamerRunner:
             rew_per_step = returns / max(epi_length, 1)
 
             if self.env_type in [Env.STARCRAFT, Env.SMACv2]:
-                wandb.log({'win': info["reward"], 'incre_win_rate': info["reward"], 'steps': cur_steps})
+                wandb.log({'win': info["reward"], 'steps': cur_steps})
                 wandb.log({'rew_per_step': rew_per_step, 'steps': cur_steps})
                 print("Epi: %4s" % cur_episode, "steps: %5s" % (cur_steps), f'Win: {info["reward"]}', 'Returns: %.4f' % returns, f"Entropy: {ent_str}", sep=' | ')
             elif self.env_type == Env.SMAX:
