@@ -7,6 +7,8 @@ import random
 import shutil
 from pathlib import Path
 
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
+
 import numpy as np
 
 from environments import Env
@@ -24,6 +26,7 @@ Experiment = None
 EnvCurriculumConfig = None
 StarCraftConfig = None
 SMAXConfig = None
+SMACv2Config = None
 PettingZooConfig = None
 FootballConfig = None
 MAMujocoConfig = None
@@ -57,6 +60,9 @@ def parse_args():
     parser.add_argument("--temperature", type=float, default=1.0)
 
     parser.add_argument("--sample_temp", type=float, default="inf")
+    parser.add_argument("--model_epochs", type=int, default=None)
+    parser.add_argument("--wm_epochs", type=int, default=None)
+    parser.add_argument("--agent_epochs", type=int, default=None)
 
     parser.add_argument("--average_r", action="store_true")
     parser.add_argument("--ce_for_r", action="store_true")
@@ -108,7 +114,7 @@ def _preimport_bidexhands_isaacgym() -> None:
 
 def _lazy_import_training_modules() -> None:
     global DreamerRunner, Experiment, EnvCurriculumConfig
-    global StarCraftConfig, SMAXConfig, PettingZooConfig, FootballConfig, MAMujocoConfig, DexHandsConfig
+    global StarCraftConfig, SMAXConfig, SMACv2Config, PettingZooConfig, FootballConfig, MAMujocoConfig, DexHandsConfig
     global DreamerControllerConfig, DreamerLearnerConfig
     global MPEDreamerLearnerConfig, MPEDreamerControllerConfig
     global GRFDreamerLearnerConfig, GRFDreamerControllerConfig
@@ -127,6 +133,7 @@ def _lazy_import_training_modules() -> None:
         FootballConfig as _FootballConfig,
         MAMujocoConfig as _MAMujocoConfig,
         PettingZooConfig as _PettingZooConfig,
+        SMACv2Config as _SMACv2Config,
         SMAXConfig as _SMAXConfig,
         StarCraftConfig as _StarCraftConfig,
     )
@@ -151,6 +158,7 @@ def _lazy_import_training_modules() -> None:
     EnvCurriculumConfig = _EnvCurriculumConfig
     StarCraftConfig = _StarCraftConfig
     SMAXConfig = _SMAXConfig
+    SMACv2Config = _SMACv2Config
     PettingZooConfig = _PettingZooConfig
     FootballConfig = _FootballConfig
     MAMujocoConfig = _MAMujocoConfig
@@ -283,6 +291,19 @@ def prepare_smax_configs(env_name):
     }
 
 
+def prepare_smacv2_configs(env_name):
+    agent_configs = [SMAXDreamerControllerConfig(), SMAXDreamerLearnerConfig()]
+    env_config = SMACv2Config(env_name, RANDOM_SEED)
+    get_env_info(agent_configs, env_config.create_env())
+    return {
+        "env_config": (env_config, 2000),
+        "controller_config": agent_configs[0],
+        "learner_config": agent_configs[1],
+        "reward_config": None,
+        "obs_builder_config": None,
+    }
+
+
 def prepare_bidexhands_configs(task_name, rl_device="cuda:0", sim_device="cuda:0", pipeline="gpu"):
     from gym.spaces import Box
 
@@ -350,6 +371,8 @@ if __name__ == "__main__":
         configs = prepare_starcraft_configs(args.env_name)
     elif args.env == Env.SMAX:
         configs = prepare_smax_configs(args.env_name)
+    elif args.env == Env.SMACv2:
+        configs = prepare_smacv2_configs(args.env_name)
     elif args.env == Env.PETTINGZOO:
         configs = prepare_pettingzoo_configs(args.env_name, continuous_action=True)
     elif args.env == Env.GRF:
@@ -374,6 +397,13 @@ if __name__ == "__main__":
     configs["controller_config"].ENV_TYPE = Env(args.env)
 
     configs["learner_config"].seed = RANDOM_SEED
+
+    if args.model_epochs is not None:
+        configs["learner_config"].MODEL_EPOCHS = args.model_epochs
+    if args.wm_epochs is not None:
+        configs["learner_config"].WM_EPOCHS = args.wm_epochs
+    if args.agent_epochs is not None:
+        configs["learner_config"].EPOCHS = args.agent_epochs
 
     configs["learner_config"].tokenizer_type = args.tokenizer
     configs["controller_config"].tokenizer_type = args.tokenizer
@@ -440,6 +470,8 @@ if __name__ == "__main__":
         project_name = "mamujoco"
     elif args.env == Env.PETTINGZOO:
         project_name = "MPE"
+    elif args.env == Env.SMACv2:
+        project_name = "SMACv2"
     elif args.env == Env.BIDEXHANDS:
         project_name = "dexhands"
     else:

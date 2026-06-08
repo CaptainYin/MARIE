@@ -22,6 +22,8 @@ class DreamerWorkerBase:
             return self.done[handle] == 0
         elif self.env_type == Env.SMAX:
             return self.done[handle] == 0
+        elif self.env_type == Env.SMACv2:
+            return self.done[handle] == 0
         elif self.env_type == Env.PETTINGZOO:
             return self.done[handle] == 0
         elif self.env_type == Env.GRF:
@@ -40,7 +42,7 @@ class DreamerWorkerBase:
         nn_mask = None
 
         for handle in range(self.env.n_agents):
-            if self.env_type == Env.STARCRAFT or self.env_type == Env.SMAX:
+            if self.env_type in [Env.STARCRAFT, Env.SMAX, Env.SMACv2]:
                 avail_actions.append(torch.tensor(self.env.get_avail_agent_actions(handle)))
 
             if self._check_handle(handle) and handle in state:
@@ -84,7 +86,7 @@ class DreamerWorkerBase:
         return torch.cat(aug).unsqueeze(0)
 
     def _check_termination(self, info, steps_done):
-        if self.env_type == Env.STARCRAFT:
+        if self.env_type in [Env.STARCRAFT, Env.SMACv2]:
             return "episode_limit" not in info
         else:
             return steps_done < self.env.max_time_steps
@@ -98,6 +100,9 @@ class DreamerWorkerBase:
         try:
             if self.env_type == Env.STARCRAFT or self.env_type == Env.SMAX:
                 state = self._wrap(self.env.reset())
+            elif self.env_type == Env.SMACv2:
+                state, shared_obs, _ = self.env.reset()
+                state = self._wrap(state)
             elif self.env_type == Env.PETTINGZOO:
                 state, shared_obs, _ = self.env.reset()
                 state = self._wrap(state)
@@ -124,6 +129,9 @@ class DreamerWorkerBase:
                 actions, obs, fakes, av_actions, ent = self._select_actions(state)
                 if self.env_type == Env.STARCRAFT or self.env_type == Env.SMAX:
                     next_state, reward, done, info = self.env.step([action.argmax() for i, action in enumerate(actions)])
+                elif self.env_type == Env.SMACv2:
+                    next_state, shared_obs, reward, done, info, _ = self.env.step([action.argmax() for i, action in enumerate(actions)])
+                    rewards_list.append(np.array(self.unwrap(reward)))
                 elif self.env_type == Env.PETTINGZOO:
                     next_state, shared_obs, reward, done, info, _ = self.env.step(actions)
                     rewards_list.append(np.array(self.unwrap(reward)))
@@ -159,7 +167,7 @@ class DreamerWorkerBase:
                 if all([done[key] == 1 for key in range(self.env.n_agents)]):
                     break
 
-            if self.env_type == Env.STARCRAFT or self.env_type == Env.SMAX:
+            if self.env_type in [Env.STARCRAFT, Env.SMAX, Env.SMACv2]:
                 reward = 1. if 'battle_won' in info and info['battle_won'] else 0.
             elif self.env_type == Env.PETTINGZOO:
                 rew_per_step = np.mean(rewards_list)

@@ -33,6 +33,17 @@ class SMAXConfig(EnvConfig):
         return SMAX(self.env_name, self.seed, **self.kwargs)
 
 
+class SMACv2Config(EnvConfig):
+    def __init__(self, map_name, seed):
+        self.map_name = map_name
+        self.seed = seed
+
+    def create_env(self):
+        from env.smacv2.smacv2_env import SMACv2Env
+
+        return SMACv2Env({"map_name": self.map_name, "seed": self.seed})
+
+
 class PettingZooConfig(EnvConfig):
     def __init__(self, env_name, seed, continuous_action):
         self.env_name = env_name
