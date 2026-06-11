@@ -51,6 +51,7 @@ def parse_args():
     parser.add_argument("--env_name", type=str, default="5_agents", help="Specific setting")
 
     parser.add_argument("--agent_conf", type=str, default=None)
+    parser.add_argument("--enable_mpe_disc", action="store_true")
 
     parser.add_argument("--n_workers", type=int, default=1, help="Number of workers")
     parser.add_argument("--seed", type=int, default=1, help="Random seed id")
@@ -375,7 +376,9 @@ if __name__ == "__main__":
     elif args.env == Env.SMACv2:
         configs = prepare_smacv2_configs(args.env_name)
     elif args.env == Env.PETTINGZOO:
-        configs = prepare_pettingzoo_configs(args.env_name, continuous_action=True)
+        configs = prepare_pettingzoo_configs(
+            args.env_name, continuous_action=not args.enable_mpe_disc
+        )
     elif args.env == Env.GRF:
         configs = prepare_football_configs(args.env_name)
     elif args.env == Env.MAMUJOCO:
