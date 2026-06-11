@@ -6,8 +6,8 @@ import os
 import random
 import shutil
 from pathlib import Path
-# import native_runtime
-# native_runtime.prepare_train_process()
+import native_runtime
+native_runtime.prepare_train_process()
 os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 
 import numpy as np
