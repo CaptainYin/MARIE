@@ -20,8 +20,8 @@ class MAMujocoDreamerLearnerConfig(MAMujocoDreamerConfig):
         # self.SEQ_LENGTH = 20
         self.SEQ_LENGTH = self.HORIZON
         
-        self.N_SAMPLES = 200  # 1
-        self.EPOCHS = 5 # 4; 27m epochs should be 20, agents_num ~ 10 should be 20
+        self.N_SAMPLES = 500  # 1
+        self.EPOCHS = 4 # 4; 27m epochs should be 20, agents_num ~ 10 should be 20
 
         self.TARGET_UPDATE = 20  # 1
         self.clip_param = 0.1
