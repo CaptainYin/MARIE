@@ -128,20 +128,52 @@ class DreamerMemory:
 
         dones = dones.all(-2).reshape(b, t)
     
-        mask = torch.zeros(b * n, sequence_length, sequence_length)
+        mask = torch.zeros(
+            b * n,
+            sequence_length,
+            sequence_length,
+            device=dones.device,
+            dtype=torch.float32,
+        )
         for idx in range(b):
             has_done = dones[idx][:-1].sum()
             if has_done == 0:
-                mask[idx * n : (idx + 1) * n] = torch.tril(torch.ones(n, sequence_length, sequence_length))
+                mask[idx * n : (idx + 1) * n] = torch.tril(
+                    torch.ones(n, sequence_length, sequence_length, device=mask.device, dtype=mask.dtype)
+                )
 
             else:
                 done_idx = (dones[idx] == 1).nonzero().squeeze(-1) + 1
                 last_j = 0
                 for j in done_idx.tolist():
-                    mask[idx * n : (idx + 1) * n, (last_j * tokens_per_block) : (j * tokens_per_block), (last_j * tokens_per_block) : (j * tokens_per_block)] = torch.tril(torch.ones(n, (j - last_j) * tokens_per_block, (j - last_j) * tokens_per_block))
+                    mask[
+                        idx * n : (idx + 1) * n,
+                        (last_j * tokens_per_block) : (j * tokens_per_block),
+                        (last_j * tokens_per_block) : (j * tokens_per_block),
+                    ] = torch.tril(
+                        torch.ones(
+                            n,
+                            (j - last_j) * tokens_per_block,
+                            (j - last_j) * tokens_per_block,
+                            device=mask.device,
+                            dtype=mask.dtype,
+                        )
+                    )
                     last_j = j
                     
-                mask[idx * n : (idx + 1) * n, (last_j * tokens_per_block) :, (last_j * tokens_per_block) :] = torch.tril(torch.ones(n, (t - last_j) * tokens_per_block, (t - last_j) * tokens_per_block))
+                mask[
+                    idx * n : (idx + 1) * n,
+                    (last_j * tokens_per_block) :,
+                    (last_j * tokens_per_block) :,
+                ] = torch.tril(
+                    torch.ones(
+                        n,
+                        (t - last_j) * tokens_per_block,
+                        (t - last_j) * tokens_per_block,
+                        device=mask.device,
+                        dtype=mask.dtype,
+                    )
+                )
         
         return mask
     

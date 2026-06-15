@@ -1,8 +1,13 @@
 import argparse
+import os
+
+from runtime_threads import apply_thread_env_defaults, configure_torch_runtime
+
+apply_thread_env_defaults()
+
 import matplotlib
 matplotlib.use("Agg")  # Use non-interactive backend for matplotlib
 import datetime
-import os
 import random
 import shutil
 from pathlib import Path
@@ -367,6 +372,7 @@ if __name__ == "__main__":
     _lazy_import_training_modules()
 
     import torch
+    configure_torch_runtime(torch)
 
     RANDOM_SEED += args.seed * 100
     if args.env == Env.STARCRAFT:

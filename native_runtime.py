@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from typing import Iterable, Mapping, MutableMapping, Optional, Sequence, Tuple
 
+from runtime_threads import apply_thread_env_defaults
+
 
 _READY_ENV = "DIMA_NATIVE_RUNTIME_READY"
 _DISABLE_ENV = "DIMA_DISABLE_NATIVE_RUNTIME"
@@ -143,6 +145,7 @@ def _build_native_runtime_env(
     updated.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
     updated.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
     updated.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
+    apply_thread_env_defaults(updated)
 
     needs_reexec = (
         updated["LD_LIBRARY_PATH"] != old_ld_library_path
